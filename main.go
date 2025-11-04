@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/exec"
 )
 
 func parseArgs() (files []string, dryRun bool, err error) {
@@ -67,6 +68,33 @@ func createTempFile(files []string) (string, error) {
 	return tmpFile.Name(), nil
 }
 
+func launchEditor(filepath string) error {
+	// Get editor from environment or use fallback
+	editor := os.Getenv("EDITOR")
+	if editor == "" {
+		// Try vi first, then nano
+		if _, err := exec.LookPath("vi"); err == nil {
+			editor = "vi"
+		} else if _, err := exec.LookPath("nano"); err == nil {
+			editor = "nano"
+		} else {
+			return fmt.Errorf("no editor found: $EDITOR not set and neither vi nor nano are available")
+		}
+	}
+
+	// Launch the editor
+	cmd := exec.Command(editor, filepath)
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("editor exited with error: %w", err)
+	}
+
+	return nil
+}
+
 func main() {
 	files, dryRun, err := parseArgs()
 	if err != nil {
@@ -85,7 +113,12 @@ func main() {
 		os.Exit(1)
 	}
 
+	if err := launchEditor(tempFilePath); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
 	fmt.Printf("Files to rename: %v\n", files)
 	fmt.Printf("Dry run: %v\n", dryRun)
-	fmt.Printf("Temp file created: %s\n", tempFilePath)
+	fmt.Printf("Temp file: %s\n", tempFilePath)
 }
