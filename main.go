@@ -42,7 +42,7 @@ func validateFiles(files []string) error {
 	return nil
 }
 
-func createTempFile() (string, error) {
+func createTempFile(files []string) (string, error) {
 	tmpFile, err := os.CreateTemp("", "gmv-*")
 	if err != nil {
 		return "", fmt.Errorf("failed to create temp file: %w", err)
@@ -55,6 +55,13 @@ func createTempFile() (string, error) {
 `
 	if _, err := tmpFile.WriteString(header); err != nil {
 		return "", fmt.Errorf("failed to write header: %w", err)
+	}
+
+	// Write each file path on its own line
+	for _, file := range files {
+		if _, err := tmpFile.WriteString(file + "\n"); err != nil {
+			return "", fmt.Errorf("failed to write file path: %w", err)
+		}
 	}
 
 	return tmpFile.Name(), nil
@@ -72,7 +79,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	tempFilePath, err := createTempFile()
+	tempFilePath, err := createTempFile(files)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
