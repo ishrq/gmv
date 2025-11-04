@@ -23,9 +23,31 @@ func parseArgs() (files []string, dryRun bool, err error) {
 	return files, dryRun, nil
 }
 
+func validateFiles(files []string) error {
+	seen := make(map[string]bool)
+
+	for _, file := range files {
+		if seen[file] {
+			return fmt.Errorf("duplicate file specified: %s", file)
+		}
+		seen[file] = true
+
+		if _, err := os.Stat(file); os.IsNotExist(err) {
+			return fmt.Errorf("file does not exist: %s", file)
+		}
+	}
+
+	return nil
+}
+
 func main() {
 	files, dryRun, err := parseArgs()
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err := validateFiles(files); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
