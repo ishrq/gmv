@@ -359,14 +359,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	cycles := detectCycles(plan)
-	if len(cycles) > 0 {
-		fmt.Printf("Detected cycles:\n")
-		for _, cycle := range cycles {
-			fmt.Printf("  %v\n", cycle)
-		}
-	}
-
 	if err := executeRenames(plan, dryRun); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
