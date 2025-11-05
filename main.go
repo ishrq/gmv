@@ -50,14 +50,6 @@ func createTempFile(files []string) (string, error) {
 	}
 	defer tmpFile.Close()
 
-	header := `# Edit filenames below. Save and exit to apply changes.
-# Lines will be mapped in order to the original files.
-# Do not delete lines - this will cause an error.
-`
-	if _, err := tmpFile.WriteString(header); err != nil {
-		return "", fmt.Errorf("failed to write header: %w", err)
-	}
-
 	// Write each file path on its own line
 	for _, file := range files {
 		if _, err := tmpFile.WriteString(file + "\n"); err != nil {
