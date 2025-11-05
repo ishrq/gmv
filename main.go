@@ -6,6 +6,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
+	"time"
 )
 
 type RenameOp struct {
@@ -145,21 +146,77 @@ func validateEdits(original, edited []string) error {
 }
 
 func buildRenamePlan(original, edited []string) ([]RenameOp, error) {
-	var plan []RenameOp
+	initialPlan := []RenameOp{}
+	renameMap := make(map[string]string)
 
 	for i := 0; i < len(original); i++ {
-		// Skip if no change
 		if original[i] == edited[i] {
 			continue
 		}
 
-		plan = append(plan, RenameOp{
+		initialPlan = append(initialPlan, RenameOp{
 			From: original[i],
 			To:   edited[i],
 		})
+		renameMap[original[i]] = edited[i]
 	}
 
-	return plan, nil
+	cycles := detectCycles(initialPlan)
+
+	if len(cycles) == 0 {
+		return initialPlan, nil
+	}
+
+	// Handle cycles by using temp files
+	finalPlan := []RenameOp{}
+	handledInCycle := make(map[string]bool)
+
+	for _, cycle := range cycles {
+		if len(cycle) == 0 {
+			continue
+		}
+
+		// Generate temp filename
+		firstFile := cycle[0]
+		dir := filepath.Dir(firstFile)
+		tempName := filepath.Join(dir, fmt.Sprintf(".gmv_temp_%d", time.Now().UnixNano()))
+
+		// Mark all files in cycle as handled
+		for _, file := range cycle {
+			handledInCycle[file] = true
+		}
+
+		// Step 1: Move first file to temp
+		finalPlan = append(finalPlan, RenameOp{
+			From: firstFile,
+			To:   tempName,
+		})
+
+		// Step 2: Move rest of the cycle
+		for i := 1; i < len(cycle); i++ {
+			from := cycle[i]
+			to := renameMap[from]
+			finalPlan = append(finalPlan, RenameOp{
+				From: from,
+				To:   to,
+			})
+		}
+
+		// Step 3: Move temp to final destination
+		finalPlan = append(finalPlan, RenameOp{
+			From: tempName,
+			To:   renameMap[firstFile],
+		})
+	}
+
+	// Add non-cycle operations
+	for _, op := range initialPlan {
+		if !handledInCycle[op.From] {
+			finalPlan = append(finalPlan, op)
+		}
+	}
+
+	return finalPlan, nil
 }
 
 func detectCycles(plan []RenameOp) [][]string {
