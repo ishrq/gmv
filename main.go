@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strings"
 )
 
@@ -107,6 +108,37 @@ func parseEdited(filepath string) ([]string, error) {
 	return edited, nil
 }
 
+func validateEdits(original, edited []string) error {
+	// Check line count matches
+	if len(original) != len(edited) {
+		return fmt.Errorf("line count mismatch: expected %d lines, got %d lines", len(original), len(edited))
+	}
+
+	// Track target filenames to detect duplicates
+	targets := make(map[string]bool)
+
+	for i := 0; i < len(original); i++ {
+		origPath := original[i]
+		editPath := edited[i]
+
+		// Check that directory hasn't changed
+		origDir := filepath.Dir(origPath)
+		editDir := filepath.Dir(editPath)
+
+		if origDir != editDir {
+			return fmt.Errorf("cannot move files to different directories: %s -> %s", origPath, editPath)
+		}
+
+		// Check for duplicate target filenames
+		if targets[editPath] {
+			return fmt.Errorf("duplicate target filename: %s", editPath)
+		}
+		targets[editPath] = true
+	}
+
+	return nil
+}
+
 func main() {
 	files, dryRun, err := parseArgs()
 	if err != nil {
@@ -132,6 +164,11 @@ func main() {
 
 	editedFiles, err := parseEdited(tempFilePath)
 	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	if err := validateEdits(files, editedFiles); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
 	}
