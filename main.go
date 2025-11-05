@@ -144,6 +144,78 @@ func validateEdits(original, edited []string) error {
 	return nil
 }
 
+func buildRenamePlan(original, edited []string) ([]RenameOp, error) {
+	var plan []RenameOp
+
+	for i := 0; i < len(original); i++ {
+		// Skip if no change
+		if original[i] == edited[i] {
+			continue
+		}
+
+		plan = append(plan, RenameOp{
+			From: original[i],
+			To:   edited[i],
+		})
+	}
+
+	return plan, nil
+}
+
+func detectCycles(plan []RenameOp) [][]string {
+	// Build adjacency map: from -> to
+	graph := make(map[string]string)
+	for _, op := range plan {
+		graph[op.From] = op.To
+	}
+
+	visited := make(map[string]bool)
+	recStack := make(map[string]bool)
+	var cycles [][]string
+
+	var dfs func(node string, path []string) bool
+	dfs = func(node string, path []string) bool {
+		visited[node] = true
+		recStack[node] = true
+		path = append(path, node)
+
+		if next, exists := graph[node]; exists {
+			if recStack[next] {
+				// Found a cycle, extract it from path
+				cycleStart := -1
+				for i, n := range path {
+					if n == next {
+						cycleStart = i
+						break
+					}
+				}
+				if cycleStart != -1 {
+					cycle := make([]string, len(path)-cycleStart)
+					copy(cycle, path[cycleStart:])
+					cycles = append(cycles, cycle)
+				}
+				return true
+			} else if !visited[next] {
+				if dfs(next, path) {
+					return true
+				}
+			}
+		}
+
+		recStack[node] = false
+		return false
+	}
+
+	// Run DFS from each unvisited node
+	for _, op := range plan {
+		if !visited[op.From] {
+			dfs(op.From, []string{})
+		}
+	}
+
+	return cycles
+}
+
 func main() {
 	files, dryRun, err := parseArgs()
 	if err != nil {
@@ -178,8 +250,24 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("Original files: %v\n", files)
-	fmt.Printf("Edited files: %v\n", editedFiles)
+	plan, err := buildRenamePlan(files, editedFiles)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	cycles := detectCycles(plan)
+	if len(cycles) > 0 {
+		fmt.Printf("Detected cycles:\n")
+		for _, cycle := range cycles {
+			fmt.Printf("  %v\n", cycle)
+		}
+	}
+
+	fmt.Printf("Rename plan:\n")
+	for _, op := range plan {
+		fmt.Printf("  %s -> %s\n", op.From, op.To)
+	}
 	fmt.Printf("Dry run: %v\n", dryRun)
 	fmt.Printf("Temp file: %s\n", tempFilePath)
 }
