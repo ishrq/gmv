@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 func parseArgs() (files []string, dryRun bool, err error) {
@@ -87,6 +88,25 @@ func launchEditor(filepath string) error {
 	return nil
 }
 
+func parseEdited(filepath string) ([]string, error) {
+	content, err := os.ReadFile(filepath)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read edited file: %w", err)
+	}
+
+	lines := strings.Split(string(content), "\n")
+	var edited []string
+
+	for _, line := range lines {
+		line = strings.TrimSpace(line)
+		if line != "" {
+			edited = append(edited, line)
+		}
+	}
+
+	return edited, nil
+}
+
 func main() {
 	files, dryRun, err := parseArgs()
 	if err != nil {
@@ -110,7 +130,14 @@ func main() {
 		os.Exit(1)
 	}
 
-	fmt.Printf("Files to rename: %v\n", files)
+	editedFiles, err := parseEdited(tempFilePath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
+	}
+
+	fmt.Printf("Original files: %v\n", files)
+	fmt.Printf("Edited files: %v\n", editedFiles)
 	fmt.Printf("Dry run: %v\n", dryRun)
 	fmt.Printf("Temp file: %s\n", tempFilePath)
 }
