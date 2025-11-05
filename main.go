@@ -14,8 +14,46 @@ type RenameOp struct {
 	To   string
 }
 
+func printHelp() {
+	help := `gmv - Batch rename files using $EDITOR
+
+USAGE:
+    gmv [OPTIONS] <files>...
+
+OPTIONS:
+    --dry-run    Print changes without applying them
+    --help, -h   Show this help message
+
+EXAMPLES:
+    gmv test-file.go        # Rename test-file.go in the editor
+    gmv *                   # Rename all files in the editor
+    gmv *.{pdf,epub}        # Rename all pdf and epub files
+    gmv */                  # Rename all directories
+    gmv test-dir/*.txt      # Rename all text files in test-dir
+    gmv */*                 # Rename all files in all directories
+    gmv --dry-run *         # Preview changes without applying
+    gmv --help              # Print help
+
+DESCRIPTION:
+    gmv opens your $EDITOR with a list of files to rename. Edit the filenames,
+    save and exit. The files will be renamed accordingly. File swaps are
+    automatically handled using temporary files.
+
+    A log of all rename operations is saved in your system's temp directory.
+`
+	fmt.Print(help)
+}
+
 func parseArgs() (files []string, dryRun bool, err error) {
 	args := os.Args[1:]
+
+	// Check for help flag first
+	for _, arg := range args {
+		if arg == "--help" || arg == "-h" {
+			printHelp()
+			os.Exit(0)
+		}
+	}
 
 	for _, arg := range args {
 		if arg == "--dry-run" {
@@ -36,11 +74,13 @@ func validateFiles(files []string) error {
 	seen := make(map[string]bool)
 
 	for _, file := range files {
+		// Check for duplicates
 		if seen[file] {
 			return fmt.Errorf("duplicate file specified: %s", file)
 		}
 		seen[file] = true
 
+		// Check if file exists
 		if _, err := os.Stat(file); os.IsNotExist(err) {
 			return fmt.Errorf("file does not exist: %s", file)
 		}
@@ -67,8 +107,10 @@ func createTempFile(files []string) (string, error) {
 }
 
 func launchEditor(filepath string) error {
+	// Get editor from environment or use fallback
 	editor := os.Getenv("EDITOR")
 	if editor == "" {
+		// Try vi first, then nano
 		if _, err := exec.LookPath("vi"); err == nil {
 			editor = "vi"
 		} else if _, err := exec.LookPath("nano"); err == nil {
@@ -78,6 +120,7 @@ func launchEditor(filepath string) error {
 		}
 	}
 
+	// Launch the editor
 	cmd := exec.Command(editor, filepath)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
@@ -141,10 +184,12 @@ func validateEdits(original, edited []string) error {
 }
 
 func buildRenamePlan(original, edited []string) ([]RenameOp, error) {
+	// Build initial plan
 	initialPlan := []RenameOp{}
 	renameMap := make(map[string]string) // from -> to mapping
 
 	for i := 0; i < len(original); i++ {
+		// Skip if no change
 		if original[i] == edited[i] {
 			continue
 		}
