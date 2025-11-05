@@ -36,13 +36,11 @@ func validateFiles(files []string) error {
 	seen := make(map[string]bool)
 
 	for _, file := range files {
-		// Check for duplicates
 		if seen[file] {
 			return fmt.Errorf("duplicate file specified: %s", file)
 		}
 		seen[file] = true
 
-		// Check if file exists
 		if _, err := os.Stat(file); os.IsNotExist(err) {
 			return fmt.Errorf("file does not exist: %s", file)
 		}
@@ -58,7 +56,6 @@ func createTempFile(files []string) (string, error) {
 	}
 	defer tmpFile.Close()
 
-	// Write each file path on its own line
 	for _, file := range files {
 		if _, err := tmpFile.WriteString(file + "\n"); err != nil {
 			return "", fmt.Errorf("failed to write file path: %w", err)
@@ -69,10 +66,8 @@ func createTempFile(files []string) (string, error) {
 }
 
 func launchEditor(filepath string) error {
-	// Get editor from environment or use fallback
 	editor := os.Getenv("EDITOR")
 	if editor == "" {
-		// Try vi first, then nano
 		if _, err := exec.LookPath("vi"); err == nil {
 			editor = "vi"
 		} else if _, err := exec.LookPath("nano"); err == nil {
@@ -82,7 +77,6 @@ func launchEditor(filepath string) error {
 		}
 	}
 
-	// Launch the editor
 	cmd := exec.Command(editor, filepath)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout
@@ -115,7 +109,6 @@ func parseEdited(filepath string) ([]string, error) {
 }
 
 func validateEdits(original, edited []string) error {
-	// Check line count matches
 	if len(original) != len(edited) {
 		return fmt.Errorf("line count mismatch: expected %d lines, got %d lines", len(original), len(edited))
 	}
@@ -161,8 +154,10 @@ func buildRenamePlan(original, edited []string) ([]RenameOp, error) {
 		renameMap[original[i]] = edited[i]
 	}
 
+	// Detect cycles
 	cycles := detectCycles(initialPlan)
 
+	// If no cycles, return the initial plan
 	if len(cycles) == 0 {
 		return initialPlan, nil
 	}
@@ -273,6 +268,19 @@ func detectCycles(plan []RenameOp) [][]string {
 	return cycles
 }
 
+func executeRenames(plan []RenameOp, dryRun bool) error {
+	for _, op := range plan {
+		if dryRun {
+			fmt.Printf("%s -> %s\n", op.From, op.To)
+		} else {
+			if err := os.Rename(op.From, op.To); err != nil {
+				return fmt.Errorf("failed to rename %s to %s: %w", op.From, op.To, err)
+			}
+		}
+	}
+	return nil
+}
+
 func main() {
 	files, dryRun, err := parseArgs()
 	if err != nil {
@@ -321,10 +329,13 @@ func main() {
 		}
 	}
 
-	fmt.Printf("Rename plan:\n")
-	for _, op := range plan {
-		fmt.Printf("  %s -> %s\n", op.From, op.To)
+	if err := executeRenames(plan, dryRun); err != nil {
+		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
+		os.Exit(1)
 	}
-	fmt.Printf("Dry run: %v\n", dryRun)
+
+	if !dryRun {
+		fmt.Printf("Successfully renamed files.\n")
+	}
 	fmt.Printf("Temp file: %s\n", tempFilePath)
 }
