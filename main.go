@@ -56,6 +56,7 @@ func createTempFile(files []string) (string, error) {
 	}
 	defer tmpFile.Close()
 
+	// Write each file path on its own line
 	for _, file := range files {
 		if _, err := tmpFile.WriteString(file + "\n"); err != nil {
 			return "", fmt.Errorf("failed to write file path: %w", err)
@@ -109,6 +110,7 @@ func parseEdited(filepath string) ([]string, error) {
 }
 
 func validateEdits(original, edited []string) error {
+	// Check line count matches
 	if len(original) != len(edited) {
 		return fmt.Errorf("line count mismatch: expected %d lines, got %d lines", len(original), len(edited))
 	}
@@ -140,7 +142,7 @@ func validateEdits(original, edited []string) error {
 
 func buildRenamePlan(original, edited []string) ([]RenameOp, error) {
 	initialPlan := []RenameOp{}
-	renameMap := make(map[string]string)
+	renameMap := make(map[string]string) // from -> to mapping
 
 	for i := 0; i < len(original); i++ {
 		if original[i] == edited[i] {
@@ -281,6 +283,42 @@ func executeRenames(plan []RenameOp, dryRun bool) error {
 	return nil
 }
 
+func writeLog(plan []RenameOp) (string, error) {
+	// Get current working directory
+	cwd, err := os.Getwd()
+	if err != nil {
+		cwd = "unknown"
+	}
+
+	// Create log file
+	timestamp := time.Now().Format("20060102-150405")
+	logPath := filepath.Join(os.TempDir(), fmt.Sprintf("gmv-log-%s", timestamp))
+
+	logFile, err := os.Create(logPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to create log file: %w", err)
+	}
+	defer logFile.Close()
+
+	// Write header
+	header := fmt.Sprintf("# gmv operation log - %s\n", time.Now().Format("2006-01-02 15:04:05"))
+	header += fmt.Sprintf("# Working directory: %s\n\n", cwd)
+
+	if _, err := logFile.WriteString(header); err != nil {
+		return "", fmt.Errorf("failed to write log header: %w", err)
+	}
+
+	// Write operations
+	for _, op := range plan {
+		line := fmt.Sprintf("%s -> %s\n", op.From, op.To)
+		if _, err := logFile.WriteString(line); err != nil {
+			return "", fmt.Errorf("failed to write log entry: %w", err)
+		}
+	}
+
+	return logPath, nil
+}
+
 func main() {
 	files, dryRun, err := parseArgs()
 	if err != nil {
@@ -335,7 +373,12 @@ func main() {
 	}
 
 	if !dryRun {
-		fmt.Printf("Successfully renamed files.\n")
+		logPath, err := writeLog(plan)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Warning: failed to write log: %v\n", err)
+		} else {
+			fmt.Printf("Successfully renamed files.\n")
+			fmt.Printf("A log file is saved at %s\n", logPath)
+		}
 	}
-	fmt.Printf("Temp file: %s\n", tempFilePath)
 }
