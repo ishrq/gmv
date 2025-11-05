@@ -8,6 +8,11 @@ import (
 	"strings"
 )
 
+type RenameOp struct {
+	From string
+	To   string
+}
+
 func parseArgs() (files []string, dryRun bool, err error) {
 	args := os.Args[1:]
 
