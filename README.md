@@ -7,14 +7,13 @@ A CLI tool for batch renaming files using your $EDITOR.
 Example commands:
 
 ```bash
-gmv test-file.go        # rename test-file.go in the editor
-gmv *                   # rename all files in the editor
-gmv *.{pdf,epub}        # rename all pdf and epub files
-gmv */                  # rename all directories
-gmv test-dir/*.txt      # rename all text files in test-dir
-gmv */*                 # rename all files in all directories
-gmv --dry-run *         # print changes without applying
-gmv --help              # print help
+gmv *                   # Rename all files in current directory
+gmv *.{pdf,epub}        # Rename all PDF and EPUB files
+gmv test-dir/*.txt      # Rename all text files in test-dir
+gmv file1.go file2.go   # Rename specific files
+gmv */                  # Rename all directories
+gmv --dry-run *         # Preview changes without applying
+gmv --help
 ```
 
 ## Installation
