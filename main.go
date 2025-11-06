@@ -25,14 +25,12 @@ OPTIONS:
     --help, -h   Show this help message
 
 EXAMPLES:
-    gmv test-file.go        # Rename test-file.go in the editor
-    gmv *                   # Rename all files in the editor
-    gmv *.{pdf,epub}        # Rename all pdf and epub files
-    gmv */                  # Rename all directories
+    gmv *                   # Rename all files in current directory
+    gmv *.{pdf,epub}        # Rename all PDF and EPUB files
     gmv test-dir/*.txt      # Rename all text files in test-dir
-    gmv */*                 # Rename all files in all directories
+    gmv file1.go file2.go   # Rename specific files
+    gmv */                  # Rename all directories
     gmv --dry-run *         # Preview changes without applying
-    gmv --help              # Print help
 
 DESCRIPTION:
     gmv opens your $EDITOR with a list of files to rename. Edit the filenames,
@@ -47,7 +45,6 @@ DESCRIPTION:
 func parseArgs() (files []string, dryRun bool, err error) {
 	args := os.Args[1:]
 
-	// Check for help flag first
 	for _, arg := range args {
 		if arg == "--help" || arg == "-h" {
 			printHelp()
@@ -402,6 +399,11 @@ func main() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
+	}
+
+	if len(plan) == 0 {
+		fmt.Println("No files were renamed.")
+		os.Exit(0)
 	}
 
 	if err := executeRenames(plan, dryRun); err != nil {
