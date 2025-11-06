@@ -21,3 +21,7 @@ gmv --help
 ```bash
 go install github.com/ishrq/gmv@latest
 ```
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
