@@ -1,0 +1,63 @@
+version: 2
+
+before:
+  hooks:
+    - go mod download
+    - sh -c "go run tools/gen-man/*.go > gmv.1"
+    - gzip -f gmv.1
+
+builds:
+  - id: gmv
+    main: ./main.go
+    binary: gmv
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - "-s -w"
+    goos:
+      - linux
+      - darwin
+      - freebsd
+      - openbsd
+    goarch:
+      - amd64
+      - arm64
+      - 386
+    ignore:
+      - goos: darwin
+        goarch: 386
+
+archives:
+  - id: gmv-archive
+    ids:
+      - gmv
+    name_template: "{{ .ProjectName }}-{{ .Version }}-{{ .Os }}_{{ .Arch }}"
+    formats: tar.gz
+    files:
+      - gmv.1.gz
+      - README.md
+      - LICENSE
+
+checksum:
+  name_template: 'checksums.txt'
+
+release:
+  github:
+    owner: ishrq
+    name: gmv
+  prerelease: auto
+  name_template: 'v{{ .Version }}'
+
+snapshot:
+  version_template: "{{ .Version }}-next"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - '^docs:'
+      - '^test:'
+      - '^ci:'
+      - '^chore:'
