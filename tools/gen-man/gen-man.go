@@ -92,7 +92,7 @@ automatically uses temporary files to handle the operation safely.
 .SH BUGS
 Report bugs at: https://github.com/ishrq/gmv/issues
 .SH AUTHOR
-Written by Your Name.
+Written by Ishraque Alam.
 .SH COPYRIGHT
 Copyright \(co ` + year + `. License: MIT
 .SH SEE ALSO
