@@ -44,16 +44,11 @@ func printHelp() {
 func parseArgs() (files []string, dryRun bool, force bool, err error) {
 	args := os.Args[1:]
 
-	// Check for help flag first
-	for _, arg := range args {
-		if arg == "--help" || arg == "-h" {
-			printHelp()
-			os.Exit(0)
-		}
-	}
-
 	for _, arg := range args {
 		switch arg {
+		case "--help", "-h":
+			printHelp()
+			os.Exit(0)
 		case "--dry-run":
 			dryRun = true
 		case "--force", "-f":
@@ -121,7 +116,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	// Check if there are any changes
+	// Check for changes
 	if len(plan) == 0 {
 		fmt.Println("No files were renamed.")
 		os.Exit(0)
