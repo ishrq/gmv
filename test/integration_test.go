@@ -433,6 +433,140 @@ func TestNoChanges(t *testing.T) {
 	}
 }
 
+func TestOverwriteDetection(t *testing.T) {
+	// Create test files including one that will be overwritten
+	files := []string{"file1.txt", "file2.txt", "existing.txt"}
+	tmpDir, cleanup := setupTestFiles(t, files)
+	defer cleanup()
+
+	// Only file1 and file2 are in the rename list
+	original := []string{
+		filepath.Join(tmpDir, "file1.txt"),
+		filepath.Join(tmpDir, "file2.txt"),
+	}
+	// Try to rename file1 to existing.txt (which exists but is NOT in our list)
+	edited := []string{
+		filepath.Join(tmpDir, "existing.txt"),
+		filepath.Join(tmpDir, "file2.txt"),
+	}
+
+	if err := rename.ValidateEdits(original, edited); err != nil {
+		t.Fatalf("Validation failed: %v", err)
+	}
+
+	plan, err := rename.BuildRenamePlan(original, edited)
+	if err != nil {
+		t.Fatalf("Build plan failed: %v", err)
+	}
+
+	// Check for overwrites
+	overwrites := rename.CheckOverwrites(plan, original)
+
+	// Should detect that existing.txt would be overwritten
+	if len(overwrites) != 1 {
+		t.Errorf("Expected 1 overwrite, got %d", len(overwrites))
+	}
+
+	if len(overwrites) > 0 && overwrites[0] != filepath.Join(tmpDir, "existing.txt") {
+		t.Errorf("Expected overwrite of existing.txt, got %s", overwrites[0])
+	}
+}
+
+func TestSwapNotFlaggedAsOverwrite(t *testing.T) {
+	files := []string{"fileA.txt", "fileB.txt"}
+	tmpDir, cleanup := setupTestFiles(t, files)
+	defer cleanup()
+
+	original := []string{
+		filepath.Join(tmpDir, "fileA.txt"),
+		filepath.Join(tmpDir, "fileB.txt"),
+	}
+	// Swap the names
+	edited := []string{
+		filepath.Join(tmpDir, "fileB.txt"),
+		filepath.Join(tmpDir, "fileA.txt"),
+	}
+
+	if err := rename.ValidateEdits(original, edited); err != nil {
+		t.Fatalf("Validation failed: %v", err)
+	}
+
+	plan, err := rename.BuildRenamePlan(original, edited)
+	if err != nil {
+		t.Fatalf("Build plan failed: %v", err)
+	}
+
+	// Check for overwrites - swaps should NOT be flagged
+	overwrites := rename.CheckOverwrites(plan, original)
+
+	if len(overwrites) != 0 {
+		t.Errorf("Swaps should not be flagged as overwrites, got %d overwrites", len(overwrites))
+	}
+}
+
+func TestMultipleOverwrites(t *testing.T) {
+	// Create files including multiple that will be overwritten
+	files := []string{"file1.txt", "file2.txt", "existing1.txt", "existing2.txt"}
+	tmpDir, cleanup := setupTestFiles(t, files)
+	defer cleanup()
+
+	original := []string{
+		filepath.Join(tmpDir, "file1.txt"),
+		filepath.Join(tmpDir, "file2.txt"),
+	}
+	// Try to overwrite both existing files
+	edited := []string{
+		filepath.Join(tmpDir, "existing1.txt"),
+		filepath.Join(tmpDir, "existing2.txt"),
+	}
+
+	if err := rename.ValidateEdits(original, edited); err != nil {
+		t.Fatalf("Validation failed: %v", err)
+	}
+
+	plan, err := rename.BuildRenamePlan(original, edited)
+	if err != nil {
+		t.Fatalf("Build plan failed: %v", err)
+	}
+
+	overwrites := rename.CheckOverwrites(plan, original)
+
+	// Should detect both overwrites
+	if len(overwrites) != 2 {
+		t.Errorf("Expected 2 overwrites, got %d", len(overwrites))
+	}
+}
+
+func TestNoOverwriteWhenTargetDoesNotExist(t *testing.T) {
+	files := []string{"file1.txt"}
+	tmpDir, cleanup := setupTestFiles(t, files)
+	defer cleanup()
+
+	original := []string{
+		filepath.Join(tmpDir, "file1.txt"),
+	}
+	// Rename to a file that doesn't exist
+	edited := []string{
+		filepath.Join(tmpDir, "newfile.txt"),
+	}
+
+	if err := rename.ValidateEdits(original, edited); err != nil {
+		t.Fatalf("Validation failed: %v", err)
+	}
+
+	plan, err := rename.BuildRenamePlan(original, edited)
+	if err != nil {
+		t.Fatalf("Build plan failed: %v", err)
+	}
+
+	overwrites := rename.CheckOverwrites(plan, original)
+
+	// Should not detect any overwrites
+	if len(overwrites) != 0 {
+		t.Errorf("Expected 0 overwrites, got %d", len(overwrites))
+	}
+}
+
 // These would need to be copied or the package structure changed to allow testing
 func validateEdits(original, edited []string) error {
 	// This is a placeholder - in real implementation, you'd import from main
