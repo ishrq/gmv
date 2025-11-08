@@ -55,3 +55,30 @@ func ValidateEdits(original, edited []string) error {
 
 	return nil
 }
+
+func CheckOverwrites(plan []RenameOp, originalFiles []string) []string {
+	// Create a set of original files for quick lookup
+	originals := make(map[string]bool)
+	for _, file := range originalFiles {
+		originals[file] = true
+	}
+
+	var overwrites []string
+
+	for _, op := range plan {
+		// Skip temp files (used for swaps)
+		if filepath.Base(op.To)[:10] == ".gmv_temp_" {
+			continue
+		}
+
+		// Check if target exists and is NOT in the original list
+		if _, err := os.Stat(op.To); err == nil {
+			if !originals[op.To] {
+				// File exists and is not in our rename list - would be overwritten!
+				overwrites = append(overwrites, op.To)
+			}
+		}
+	}
+
+	return overwrites
+}
