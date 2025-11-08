@@ -41,7 +41,6 @@ func BuildRenamePlan(original, edited []string) ([]RenameOp, error) {
 			continue
 		}
 
-		// Generate temp filename
 		firstFile := cycle[0]
 		dir := filepath.Dir(firstFile)
 		tempName := filepath.Join(dir, fmt.Sprintf(".gmv_temp_%d", time.Now().UnixNano()))
@@ -51,14 +50,15 @@ func BuildRenamePlan(original, edited []string) ([]RenameOp, error) {
 			handledInCycle[file] = true
 		}
 
-		// Step 1: Move first file to temp
+		// Step 1: Move first file to temp (breaks the cycle)
 		finalPlan = append(finalPlan, RenameOp{
 			From: firstFile,
 			To:   tempName,
 		})
 
-		// Step 2: Move rest of the cycle
-		for i := 1; i < len(cycle); i++ {
+		// Step 2: Process from LAST to SECOND in the cycle
+		// Going in reverse ensures each target spot is freed before we use it
+		for i := len(cycle) - 1; i >= 1; i-- {
 			from := cycle[i]
 			to := renameMap[from]
 			finalPlan = append(finalPlan, RenameOp{
@@ -67,7 +67,7 @@ func BuildRenamePlan(original, edited []string) ([]RenameOp, error) {
 			})
 		}
 
-		// Step 3: Move temp to final destination
+		// Step 3: Move temp to the first file's target
 		finalPlan = append(finalPlan, RenameOp{
 			From: tempName,
 			To:   renameMap[firstFile],
