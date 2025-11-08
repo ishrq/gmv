@@ -127,6 +127,25 @@ func main() {
 		os.Exit(0)
 	}
 
+	// Check for overwrites
+	overwrites := rename.CheckOverwrites(plan, files)
+
+	if len(overwrites) > 0 {
+		fmt.Fprintf(os.Stderr, "WARNING: The following files will be overwritten:\n")
+		for _, file := range overwrites {
+			fmt.Fprintf(os.Stderr, "  - %s\n", file)
+		}
+
+		if dryRun {
+			fmt.Fprintf(os.Stderr, "\n")
+		} else if !force {
+			if !promptUser("Continue with overwrites?") {
+				fmt.Println("Operation cancelled.")
+				os.Exit(0)
+			}
+		}
+	}
+
 	if err := rename.ExecuteRenames(plan, dryRun); err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
