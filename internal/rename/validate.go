@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 func ValidateFiles(files []string) error {
@@ -67,7 +68,8 @@ func CheckOverwrites(plan []RenameOp, originalFiles []string) []string {
 
 	for _, op := range plan {
 		// Skip temp files (used for swaps)
-		if filepath.Base(op.To)[:10] == ".gmv_temp_" {
+		baseName := filepath.Base(op.To)
+		if strings.HasPrefix(baseName, ".gmv_temp_") {
 			continue
 		}
 
