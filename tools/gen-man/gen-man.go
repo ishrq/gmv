@@ -21,11 +21,22 @@ Upon saving and exiting, the files are renamed accordingly.
 .PP
 File swaps are automatically handled using temporary files to avoid conflicts.
 A log of all rename operations is saved in the system's temporary directory.
+.PP
+The program includes safety checks for file overwrites. If renaming would overwrite
+files that are not part of the rename operation, a warning is displayed and user
+confirmation is required (unless the
+.B \-\-force
+flag is used).
 .SH OPTIONS
 .TP
 .B \-\-dry\-run
 Preview the changes without actually renaming any files.
 Shows what would be renamed without applying the operations.
+Also displays warnings for potential overwrites.
+.TP
+.B \-\-force, \-f
+Skip confirmation prompt when files would be overwritten.
+Use with caution as this can lead to data loss.
 .TP
 .B \-\-help, \-h
 Display help information and exit.
@@ -51,6 +62,9 @@ Rename all files in all subdirectories.
 .TP
 .B gmv \-\-dry\-run *
 Preview rename operations without applying them.
+.TP
+.B gmv \-\-force *
+Skip overwrite confirmation prompts.
 .SH ENVIRONMENT
 .TP
 .B EDITOR
@@ -89,6 +103,16 @@ Empty lines or deleted lines will cause an error
 When files are swapped (e.g., file1 \(-> file2 and file2 \(-> file1),
 .B gmv
 automatically uses temporary files to handle the operation safely.
+.PP
+.B Overwrite Protection
+.PP
+If renaming would overwrite existing files that are not part of the rename list,
+.B gmv
+will display a warning with the list of files that would be affected and prompt
+for confirmation. File swaps and cycles within the rename list are allowed and
+will not trigger the overwrite warning. Use
+.B \-\-force
+to bypass the confirmation prompt.
 .SH BUGS
 Report bugs at: https://github.com/ishrq/gmv/issues
 .SH AUTHOR
