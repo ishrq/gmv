@@ -1,8 +1,10 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/ishrq/gmv/internal/rename"
 )
@@ -61,6 +63,16 @@ func parseArgs() (files []string, dryRun bool, err error) {
 	}
 
 	return files, dryRun, nil
+
+func promptUser(message string) bool {
+	reader := bufio.NewReader(os.Stdin)
+	fmt.Printf("%s (y/N): ", message)
+	response, err := reader.ReadString('\n')
+	if err != nil {
+		return false
+	}
+	response = strings.TrimSpace(strings.ToLower(response))
+	return response == "y" || response == "yes"
 }
 
 func main() {
