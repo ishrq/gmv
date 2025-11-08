@@ -17,6 +17,7 @@ func printHelp() {
 
 	OPTIONS:
 	--dry-run    Print changes without applying them
+	--force, -f  Skip confirmation prompt for overwrites
 	--help, -h   Show this help message
 
 	EXAMPLES:
@@ -27,6 +28,7 @@ func printHelp() {
 	gmv test-dir/*.txt      # Rename all text files in test-dir
 	gmv */*                 # Rename all files in all directories
 	gmv --dry-run *         # Preview changes without applying
+	gmv --force *           # Skip overwrite confirmation
 	gmv --help              # Print help
 
 	DESCRIPTION:
@@ -39,7 +41,7 @@ func printHelp() {
 	fmt.Print(help)
 }
 
-func parseArgs() (files []string, dryRun bool, err error) {
+func parseArgs() (files []string, dryRun bool, force bool, err error) {
 	args := os.Args[1:]
 
 	// Check for help flag first
@@ -51,18 +53,22 @@ func parseArgs() (files []string, dryRun bool, err error) {
 	}
 
 	for _, arg := range args {
-		if arg == "--dry-run" {
+		switch arg {
+		case "--dry-run":
 			dryRun = true
-		} else {
+		case "--force", "-f":
+			force = true
+		default:
 			files = append(files, arg)
 		}
 	}
 
 	if len(files) == 0 {
-		return nil, false, fmt.Errorf("no files specified")
+		return nil, false, false, fmt.Errorf("no files specified")
 	}
 
-	return files, dryRun, nil
+	return files, dryRun, force, nil
+}
 
 func promptUser(message string) bool {
 	reader := bufio.NewReader(os.Stdin)
@@ -76,7 +82,7 @@ func promptUser(message string) bool {
 }
 
 func main() {
-	files, dryRun, err := parseArgs()
+	files, dryRun, force, err := parseArgs()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
 		os.Exit(1)
