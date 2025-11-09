@@ -4,16 +4,14 @@
 [![Release](https://github.com/ishrq/gmv/actions/workflows/release.yml/badge.svg)](https://github.com/ishrq/gmv/actions/workflows/release.yml)
 [![Go Report Card](https://goreportcard.com/badge/github.com/ishrq/gmv)](https://goreportcard.com/report/github.com/ishrq/gmv)
 
-A powerful CLI tool for batch renaming files and directories using your `$EDITOR`.
+A powerful CLI tool to batch rename files and directories using your `$EDITOR`.
 
 ## Features
 
 - **Batch rename** files and directories in your text editor
-- **Overwrite protection** - warns and prompts before overwriting existing files
-- **Automatic swap handling** - swap file names without conflicts using temporary files
 - **Dry-run mode** - preview changes before applying them
-- **Operation logging** - keeps a temporary log of all rename operations
-- **Comprehensive validation** - prevents directory moves, detects duplicates
+- **Operation logging** - keeps a temporary log of your rename operations
+- **Comprehensive validation** - prevents moving directories, detect duplicate file names, prevent overwriting files.
 - **Cross-platform** - works on Linux, macOS, BSD systems, and Android
 
 ## Installation
@@ -42,14 +40,14 @@ sudo make install
 ### Basic Examples
 
 ```bash
-# Rename all files in current directory
-gmv *
-
 # Rename specific files
 gmv file1.go file2.go
 
 # Rename specific file types
 gmv *.{pdf,epub}
+
+# Rename all files in current directory
+gmv *
 
 # Rename files in a subdirectory
 gmv src/*.jsx
@@ -82,27 +80,6 @@ gmv -h
 2. Edit the filenames as needed (one per line)
 3. Save and exit the editor
 4. **gmv** validates the changes and applies the renames
-
-### File Swaps
-
-**gmv** automatically handles file swaps and cycles using temporary files:
-
-```bash
-# Original files
-file-a.txt
-file-b.txt
-
-# After editing: swap the names
-file-b.txt
-file-a.txt
-
-# gmv handles this automatically!
-```
-
-Even complex cycles work seamlessly:
-```
-a → b → c → a  # No problem!
-```
 
 ### Overwrite Protection
 
